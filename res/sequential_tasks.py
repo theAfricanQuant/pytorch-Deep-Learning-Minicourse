@@ -8,27 +8,23 @@ def pad_sequences(sequences, maxlen=None, dtype='int32',
     lengths = []
     for x in sequences:
         if not hasattr(x, '__len__'):
-            raise ValueError('`sequences` must be a list of iterables. '
-                             'Found non-iterable: ' + str(x))
+            raise ValueError(
+                f'`sequences` must be a list of iterables. Found non-iterable: {str(x)}'
+            )
         lengths.append(len(x))
 
     num_samples = len(sequences)
     if maxlen is None:
         maxlen = np.max(lengths)
 
-    # take the sample shape from the first non empty sequence
-    # checking for consistency in the main loop below.
-    sample_shape = tuple()
-    for s in sequences:
-        if len(s) > 0:
-            sample_shape = np.asarray(s).shape[1:]
-            break
-
+    sample_shape = next(
+        (np.asarray(s).shape[1:] for s in sequences if len(s) > 0), tuple()
+    )
     is_dtype_str = np.issubdtype(dtype, np.str_) or np.issubdtype(dtype, np.unicode_)
     if isinstance(value, six.string_types) and dtype != object and not is_dtype_str:
-        raise ValueError("`dtype` {} is not compatible with `value`'s type: {}\n"
-                         "You should set `dtype=object` for variable length strings."
-                         .format(dtype, type(value)))
+        raise ValueError(
+            f"`dtype` {dtype} is not compatible with `value`'s type: {type(value)}\nYou should set `dtype=object` for variable length strings."
+        )
 
     x = np.full((num_samples, maxlen) + sample_shape, value, dtype=dtype)
     for idx, s in enumerate(sequences):
@@ -39,22 +35,21 @@ def pad_sequences(sequences, maxlen=None, dtype='int32',
         elif truncating == 'post':
             trunc = s[:maxlen]
         else:
-            raise ValueError('Truncating type "%s" '
-                             'not understood' % truncating)
+            raise ValueError(f'Truncating type "{truncating}" not understood')
 
         # check `trunc` has expected shape
         trunc = np.asarray(trunc, dtype=dtype)
         if trunc.shape[1:] != sample_shape:
-            raise ValueError('Shape of sample %s of sequence at position %s '
-                             'is different from expected shape %s' %
-                             (trunc.shape[1:], idx, sample_shape))
+            raise ValueError(
+                f'Shape of sample {trunc.shape[1:]} of sequence at position {idx} is different from expected shape {sample_shape}'
+            )
 
         if padding == 'post':
             x[idx, :len(trunc)] = trunc
         elif padding == 'pre':
             x[idx, -len(trunc):] = trunc
         else:
-            raise ValueError('Padding type "%s" not understood' % padding)
+            raise ValueError(f'Padding type "{padding}" not understood')
     return x
 
 def to_categorical(y, num_classes=None, dtype='float32'):
@@ -156,13 +151,13 @@ class TemporalOrderExp6aSequence():
             np.random.seed(seed)
 
         all_symbols = self.relevant_symbols + self.distraction_symbols + \
-                      [self.start_symbol] + [self.end_symbol]
+                          [self.start_symbol] + [self.end_symbol]
         self.n_symbols = len(all_symbols)
         self.s_to_idx = {s: n for n, s in enumerate(all_symbols)}
-        self.idx_to_s = {n: s for n, s in enumerate(all_symbols)}
+        self.idx_to_s = dict(enumerate(all_symbols))
 
         self.c_to_idx = {c: n for n, c in enumerate(self.classes)}
-        self.idx_to_c = {n: c for n, c in enumerate(self.classes)}
+        self.idx_to_c = dict(enumerate(self.classes))
 
     def generate_pair(self):
         length = np.random.randint(self.length_range[0], self.length_range[1])
